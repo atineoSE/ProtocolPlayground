@@ -23,3 +23,8 @@ inference.askHowAreYou()
 let declaredType: Greeter = FrenchGreeter()
 declaredType.sayHi()
 declaredType.askHowAreYou()
+
+//: **atineoSE:** watch out when adding additional methods to a protocol extension
+//: that are not in the protocol declaration because those methods may be not
+//: resolved in the precedence you expect, for vars declared as conforming
+//: to the protocol

@@ -5,145 +5,162 @@ import PlaygroundSupport
 
 /*:
  ### Initial Protocol Definition
-
-What are the things that something conforming to htis protocol is required to do?
-*/
+ 
+ What are the things that something conforming to this protocol is required to do?
+ */
+//: **atineoSE:** A: base protocol
 protocol HUDShowing {
-  func showHUD(in view: UIView,
-               title: String?,
-               animated: Bool) -> HUD
-  
-  func hideHUD(_ hud: HUD,
-               animated: Bool)
+    func showHUD(in view: UIView,
+                 title: String?,
+                 animated: Bool) -> HUD
+    
+    func hideHUD(_ hud: HUD,
+                 animated: Bool)
 }
 
 /*:
  ### Default Protocol Extension
-
-By default, what should something conforming to this protocol do in order to fulfill requirements of the protocol?
  
-If something declared in the protocol isn't implemented here, anything that conforms to the protocol must provide an implementation.
-*/
+ By default, what should something conforming to this protocol do in order to fulfill requirements of the protocol?
+ 
+ If something declared in the protocol isn't implemented here, anything that conforms to the protocol must provide an implementation.
+ */
+//: **atineoSE:** B: base protocol extension, all conforming classes get the behaviour for free but it cannot
+//: contain properties from the different objects
 extension HUDShowing {
-  
-  func showHUD(in view: UIView,
-               title: String?,
-               animated: Bool = true) -> HUD {
-    let hud = HUD(text: title)
-    hud.frame = view.bounds
-    view.addSubview(hud)
-    hud.show(animated: animated)
+    func showHUD(in view: UIView,
+                 title: String?,
+                 animated: Bool = true) -> HUD {
+        let hud = HUD(text: title)
+        hud.frame = view.bounds
+        view.addSubview(hud)
+        hud.show(animated: animated)
+        
+        return hud
+    }
     
-    return hud
-  }
-  
-  func hideHUD(_ hud: HUD,
-               animated: Bool = true) {
-    hud.hide(animated: animated, completion: {
-      hud.removeFromSuperview()
-    })
-  }
+    func hideHUD(_ hud: HUD,
+                 animated: Bool = true) {
+        hud.hide(animated: animated, completion: {
+            hud.removeFromSuperview()
+        })
+    }
 }
 
 /*:
  ### Adding a protocol extension to a default type
+ 
+ Allows everything directly or indirectly inheriting from this type to use the default implementation.
+ */
 
-Allows everything directly or indirectly inheriting from this type to use the default implementation.
-*/
+//: **atineoSE:** C: protocol extension for UIView. We extend UIView with 2 wrapper methods
+//: to bridge to our default implementation in B
 extension UIView: HUDShowing {
-
-  @discardableResult
-  func showHUD(title: String?,
-               animated: Bool = true) -> HUD {
-    return self.showHUD(in: self,
-                        title: title,
-                        animated: animated)
-  }
-
-  func hideHUD(animated: Bool = true) {
-    guard let hud = HUD.hud(in: self) else { return }
-
-    self.hideHUD(hud, animated: animated)
-  }
+//: **atineoSE:** - From Swift book:
+//: `discardableResult`
+//: > Apply this attribute to a function or method declaration to suppress
+//: > the compiler warning when the function or method that returns
+//: > a value is called without using its result.
+    
+    @discardableResult
+    func showHUD(title: String?,
+                 animated: Bool = true) -> HUD {
+        return self.showHUD(in: self,
+                            title: title,
+                            animated: animated)
+    }
+    
+//: **atineoSE:** - This method below is needed because we are extending a class we don't own
+//: so we need to obtain the hud before calling the method
+//: in the extension, whose signature requires the hud view as param
+    func hideHUD(animated: Bool = true) {
+        guard let hud = HUD.hud(in: self) else { return }
+        self.hideHUD(hud, animated: animated)
+    }
 }
 
 /*:
  ### Using the extended functionality in another default implementation
-
-Now when making a view controller which conforms to UIViewController, you can use the same convenience methods as above.
+ 
+ Now when making a view controller which conforms to UIViewController, you can use the same convenience methods as above.
  */
 
+//: **atineoSE:** D: additional protocol extension for specific classes, not for all possibly conforming classes
 extension HUDShowing where Self: UIViewController {
-  
-  var viewToShowHUDIn: UIView {
-    if let tabBar = self.tabBarController {
-      return tabBar.view
-    } else if let nav = self.navigationController {
-      return nav.view
-    } else {
-      return self.view
+    
+//: **atineoSE:** - This is to show the HUD in a way that it covers the whole screen
+//: so that the user cannot activate other controls while she waits
+    var viewToShowHUDIn: UIView {
+        if let tabBar = self.tabBarController {
+            return tabBar.view
+        } else if let nav = self.navigationController {
+            return nav.view
+        } else {
+            return self.view
+        }
     }
-  }
-
-  @discardableResult
-  func showHUD(title: String?,
-               animated: Bool = true) -> HUD {
-    return self.viewToShowHUDIn.showHUD(title: title, animated: animated)
-  }
-
-  func hideHUD(animated: Bool = true) {
-    self.viewToShowHUDIn.hideHUD(animated: animated)
-  }
+    
+    @discardableResult
+    func showHUD(title: String?,
+                 animated: Bool = true) -> HUD {
+        return self.viewToShowHUDIn.showHUD(title: title, animated: animated)
+    }
+    
+    func hideHUD(animated: Bool = true) {
+        self.viewToShowHUDIn.hideHUD(animated: animated)
+    }
 }
 
 /*:
  ### Another protocol definition
-*/
-
+ */
+//: **atineoSE:** D: another protocol
 protocol UserDetailsFetching {
-
-  func handleError(_ error: Error)
-
-  func fetchUserDetails(successCompletion: @escaping (UserDetails) -> Void)
+    
+    func handleError(_ error: Error)
+    
+    func fetchUserDetails(successCompletion: @escaping (UserDetails) -> Void)
 }
 
 /*:
  ### Default definition for multiple conditions
-
- Anything taking wishing to take advantage of these implementations must conform to all requirements: In this case it must be a UIViewController which already conforms to HUDShowing
-
+ 
+ Anything wishing to take advantage of these implementations must conform to all requirements: In this case it must be a UIViewController which already conforms to HUDShowing
+ 
  This allows you to use protocols like building blocks really easily.
-*/
+ */
+//: **atineoSE:** E: protocol extension for default implementation only for certain classes,
+//: which additionally must conform to the protocol in A
 extension UserDetailsFetching where Self: UIViewController, Self: HUDShowing {
-
-  private func showErrorAlert(for error: Error) {
-    let alert = UIAlertController(title: "Error fetching details",
-                                  message: error.localizedDescription,
-                                  preferredStyle: .alert)
-
-    alert.addAction(UIAlertAction(title: "OK",
-                                  style: .default))
-
-    self.present(alert, animated: true)
-  }
-
-  func handleError(_ error: Error) {
-    self.showErrorAlert(for: error)
-  }
-
-  func fetchUserDetails(successCompletion: @escaping (UserDetails) -> Void) {
-    self.showHUD(title: "Fetching details...")
-    Network.fetchUserDetails(failureCompletion: { [weak self] error in
-      self?.hideHUD()
-      self?.handleError(error)
-    }, successCompletion: { [weak self] details in
-      self?.hideHUD()
-      successCompletion(details)
-    })
-  }
+    
+    private func showErrorAlert(for error: Error) {
+        let alert = UIAlertController(title: "Error fetching details",
+                                      message: error.localizedDescription,
+                                      preferredStyle: .alert)
+        
+        alert.addAction(UIAlertAction(title: "OK",
+                                      style: .default))
+        
+        self.present(alert, animated: true)
+    }
+    
+    func handleError(_ error: Error) {
+        self.showErrorAlert(for: error)
+    }
+    
+    func fetchUserDetails(successCompletion: @escaping (UserDetails) -> Void) {
+        self.showHUD(title: "Fetching details...")
+        Network.fetchUserDetails(failureCompletion: { [weak self] error in
+            self?.hideHUD()
+            self?.handleError(error)
+            }, successCompletion: { [weak self] details in
+                self?.hideHUD()
+                successCompletion(details)
+        })
+    }
 }
 
-/*
+/*:
  ### Adding conformances to view controllers which are in the `Sources` folder
  */
 
@@ -151,7 +168,7 @@ extension SomeViewController: HUDShowing { }
 extension AnotherViewController: HUDShowing { }
 extension AnotherViewController: UserDetailsFetching { }
 
-/*
+/*:
  ### Setting up various views for animation
  */
 
@@ -169,22 +186,22 @@ let tabBar = SomeViewController.inTabBarController()
 let tabWithNav = SomeViewController.inNavControllerInTabBarController()
 
 guard let inNav = nav.topViewController as? SomeViewController else {
-  fatalError("ERROR: Top VC is not SomeViewController")
+    fatalError("ERROR: Top VC is not SomeViewController")
 }
 guard let inTab = tabBar.viewControllers?.first as? SomeViewController else {
-  fatalError("ERROR: First VC is not SomeViewController")
+    fatalError("ERROR: First VC is not SomeViewController")
 }
 guard let inNavInTab = (tabWithNav.viewControllers?.first as? UINavigationController)?.topViewController as? SomeViewController else {
-  fatalError("Top VC in nav in tab is not SomeViewController")
+    fatalError("Top VC in nav in tab is not SomeViewController")
 }
 guard let another = tabWithNav.viewControllers?.last as? AnotherViewController else {
-  fatalError("Last VC is not AnotherViewController")
+    fatalError("Last VC is not AnotherViewController")
 }
 
-/*
+/*:
  ### Actual animation!
  
- Uses some convenience methods on GCD (available in `Sources` if you're curious) to make it a bit clearer to chain all this in a readable fashinon. 
+ Uses some convenience methods on GCD (available in `Sources` if you're curious) to make it a bit clearer to chain all this in a readable fashion. 
  
  Make sure you've got the live view showing so you can see all this in action.
  */
@@ -193,46 +210,53 @@ PlaygroundPage.current.liveView = aPlainView
 
 GCDConvenience.async {
     aPlainView.showHUD(title: "In a plain view with the UIView extension")
-  }.next {
-    aPlainView.hideHUD()
-  }.next {
-    PlaygroundPage.current.liveView = someView
-  }.next {
-    someView.showHUD(title: "In a conforming UIView subclass")
-  }.next {
-    someView.hideHUD()
-  }.next {
-    PlaygroundPage.current.liveView = vc
-  }.next {
-    vc.showHUD(title: "In a conforming UIVC subclass")
-  }.next {
-    vc.hideHUD()
-  }.next {
-    PlaygroundPage.current.liveView = nav
-  }.next {
-    inNav.showHUD(title: "In a conforming UIVC subclass in a UINavigationController")
-  }.next {
-    inNav.hideHUD()
-  }.next {
-    PlaygroundPage.current.liveView = tabBar
-  }.next {
-    inTab.showHUD(title: "In a conforming UIVC subclass in a UITabBarController")
-  }.next {
-    inTab.hideHUD()
-  }.next {
-    PlaygroundPage.current.liveView = tabWithNav
-  }.next {
-    inNavInTab.showHUD(title: "In a conforming UIVC sublclass in a UINavigation controller in a UITabBarController")
-  }.next {
-    inNavInTab.hideHUD()
-  }.next {
-    tabWithNav.selectedViewController = another
-  }.next {
-    another.fetchUserDetails { userDetails in
-      another.label.text = "User Name: \(userDetails.name)\nUser handle: @\(userDetails.username)"
-    }
-  }.finally(after: 5) {
-    PlaygroundPage.current.finishExecution()
-  }
+//: **atineoSE:** Because we made UIView conform in C, then an UIView has the behaviour, no need to subclass
+    }.next {
+        aPlainView.hideHUD()
+    }.next {
+        PlaygroundPage.current.liveView = someView
+    }.next {
+        someView.showHUD(title: "In a conforming UIView subclass")
+//: **atineoSE:** Subclasses of UIView all have the behaviour for free, here ALL subclasses have it because
+//: we didn't restrict it
+    }.next {
+        someView.hideHUD()
+    }.next {
+        PlaygroundPage.current.liveView = vc
+    }.next {
+        vc.showHUD(title: "In a conforming UIVC subclass")
+//: **atineoSE:** - Because we add the behaviour as well for VC in D, VCs can show and hide the HUD
+    }.next {
+        vc.hideHUD()
+    }.next {
+        PlaygroundPage.current.liveView = nav
+    }.next {
+        inNav.showHUD(title: "In a conforming UIVC subclass in a UINavigationController")
+//: **atineoSE:** - Because we added extra behaviour via `viewToShowHUDIn` in D, the topmost view is used
+//: for displaying the HUD, so that it covers the full UI and it remains non-actionable
+//: otherwise it would have only covered the view inside, not covering the navbar
+    }.next {
+        inNav.hideHUD()
+    }.next {
+        PlaygroundPage.current.liveView = tabBar
+    }.next {
+        inTab.showHUD(title: "In a conforming UIVC subclass in a UITabBarController")
+    }.next {
+        inTab.hideHUD()
+    }.next {
+        PlaygroundPage.current.liveView = tabWithNav
+    }.next {
+        inNavInTab.showHUD(title: "In a conforming UIVC sublclass in a UINavigation controller in a UITabBarController")
+    }.next {
+        inNavInTab.hideHUD()
+    }.next {
+        tabWithNav.selectedViewController = another
+    }.next {
+        another.fetchUserDetails { userDetails in
+            another.label.text = "User Name: \(userDetails.name)\nUser handle: @\(userDetails.username)"
+        }
+    }.finally(after: 5) {
+        PlaygroundPage.current.finishExecution()
+}
 
 //: [Some Pitfalls >](@next)
